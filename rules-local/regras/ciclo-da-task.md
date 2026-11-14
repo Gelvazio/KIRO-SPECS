@@ -1,0 +1,143 @@
+<!-- regra-id: global:ciclo-da-task · versao: 2026-11-13 19:01 · origem: geo · base: f949fc1d155f -->
+# 🔁 Ciclo de uma tarefa (TASK)
+
+Vale para qualquer projeto e para todas as IAs. Onde fica cada informação: `quadro-de-tarefas.md`.
+"Linha" do quadro = item do índice simplificado do `STATUS.md` (C55) ou linha da tabela
+(legado).
+
+> **Projeto no banco (C58):** no `rules-ai` (e no `aulasenai`, depois do corte) criar, reservar e
+> entregar são chamadas RPC no Supabase (`quadro-de-tarefas.md`, "Modelo do quadro no banco"): não
+> há commit de quadro, de reserva nem de mudança de linha para o `task_complete.md`. O Git fica só
+> para os arquivos que a subtarefa muda. Onde abaixo está "commit + push do quadro", no banco vale a
+> RPC indicada.
+
+## O que vira TASK
+
+- ✅ Todo pedido que **muda** arquivo, banco ou configuração vira TASK **antes** de executar.
+- ❌ Pergunta, explicação ou análise que não muda nada **não** vira TASK: só responder.
+
+## Ordem de todo pedido: criar → publicar → assumir → trabalhar
+
+1. Sincronizar com o remoto e ler o `tasks/STATUS.md`.
+2. **Criar:** a etapa, a linha da mãe e **o máximo de subtarefas possível**, e a linha em
+   "🗂️ Etapas". ⛔ **Sem escrever nível, modelo nem `effort`: quem classifica é sempre o Jev**
+   (seção abaixo, C52).
+   - ✅ **ID da mãe nova (C78, 2026-11-13, pedido do usuário):** criada **no banco**, o código
+     termina em **`-BANCO-DADOS`**; criada **de forma local** (sem acesso ao banco), termina em
+     **`-TAREFA-LOCAL`**. As subtarefas herdam (`<mãe>.<n>`). Regra: `id-tarefa-sufixo.md`.
+   - ✅ **Máximo de subtarefas (2026-11-08, pedido do usuário):** toda tarefa-mãe nova nasce já
+     dividida no **maior número de subtarefas possível**, cada uma pequena, com entrega e
+     verificação próprias (ex.: uma por seção escrita, por arquivo, por conferência, por regra a
+     anotar e uma de fechamento). Vale para qualquer tarefa que mude algo e vence o "no mínimo 1"
+     de outras regras. ⛔ Não inventar subtarefa vazia só para aumentar o número: cada uma entrega
+     algo conferível. **Por quê:** subtarefa pequena retoma de onde parou, divide o trabalho entre
+     IAs e mostra o andamento real no quadro.
+3. **Publicar:** commit + push do quadro com a tarefa nova. No banco: a subtarefa é criada por
+   `criar_subtarefa` (já publicada); a **mãe nova** nasce por `criar_tarefa_mae` (mãe + etapa numa
+   transação; cliente `criarTarefaMae`) e depois ganha as subtarefas por `criar_subtarefa`.
+4. **Assumir:** reservar a subtarefa que vai executar (`frentes-e-reserva.md`): em `.md`, commit +
+   push; no banco, `reservar` (sem commit).
+5. **Pedir confirmação só se for necessário:** se faltar detalhe crítico, perguntar numa mensagem
+   só (objetivo e resultado esperado, escopo, arquivos, critério de pronto). Não perguntar o que
+   já está no pedido, no quadro ou no código; pedido completo → confirmar o entendimento em 1 frase
+   e seguir. ❌ Não assumir detalhe crítico em silêncio.
+
+## 🧠 O Jev AI escolhe o modelo: sempre, sem exceção (C52)
+
+Decidido em 2026-10-24 (C52, tarefa JEV-SEMPRE; pedido do usuário). Vale para **todas as IAs e
+todos os projetos** e vence qualquer atalho. Detalhe do Jev: `jev.md`.
+
+- ⛔ **NUNCA, JAMAIS nenhuma IA escolhe nível, modelo ou `effort` de tarefa ou subtarefa por conta
+  própria.** Nem "pelos sinais", nem "porque é óbvio", nem "só ampliando para Haiku ou DeepSeek".
+- ✅ **Quem cria ou divide uma tarefa** escreve a seção da subtarefa **sem** `Nível`, `Modelo` e
+  `Effort` (na linha do quadro, Modelo = `— (a classificar pelo Jev)`) e **roda o Jev**:
+  `node scripts/jev.mjs classificar --id <ID> --gravar`. O que o Jev gravar é o que vale.
+- ✅ **Mudar quem pode pegar** uma subtarefa (ampliar ou restringir a coluna Modelo) também passa
+  pelo Jev (`--reclassificar`) ou por **ordem escrita do usuário**, citada nas Decisões da etapa.
+- ⛔ **Jev indisponível** (sem `TYPESAFE_API_KEY`, `JEV_MODO=off`, rede, 401, 429, 529, timeout):
+  a IA **não escolhe**: grava o **padrão C71** (`MEDIO · só Sonnet, DeepSeek V4 Pro ou Devin (SWE-2) · effort medium`,
+  `JEV-AI-SUGGESTION: NAO`), avisa o usuário e o Jev reclassifica quando voltar (C71, 2026-11-04).
+  Fora desse padrão fixo, a IA **nunca escolhe no lugar do Jev**.
+- ⛔ Nível escrito por IA sem o Jev é **infração**, igual à da regra maior: reclassificar pelo Jev.
+- A skill `classificar-tarefa` e a tabela de sinais **não** substituem o Jev: servem para entender a
+  resposta dele, não para decidir.
+
+## Pequena ou grande
+
+| Tipo | Definição | Exige |
+|------|-----------|-------|
+| **Pequena** | Ajuste pontual em até ~3 arquivos, sem nada da linha de baixo | Etapa com 1 ou mais subtarefas |
+| **Grande** | Mexe em **banco**, **segurança** (login, papéis, permissões, chaves), tem **várias partes**, cria estrutura/gerador novo, faz **mudança em massa** ou **apaga dados** | Plano na **própria etapa** + **aprovação** |
+
+Na dúvida, é grande. O projeto pode definir exceções (rotinas já autorizadas).
+
+**Tarefa grande — o plano é a etapa (nunca em `docs/`):**
+1. Escrever na etapa: objetivo, escopo (entra / não entra), critério de pronto, premissas, riscos
+   com plano B e as subtarefas (com nível) e a verificação de cada uma.
+2. Mostrar ao usuário um resumo (subtarefas, arquivos, riscos, verificações) e perguntar se está certo.
+3. Esperar um **"sim" claro**; registrar a aprovação nas Decisões da etapa (quem, quando).
+4. Executar **só o escopo aprovado**. Mudança material de escopo → atualizar a etapa e pedir
+   **nova** aprovação.
+
+## Executar
+
+- **Uma subtarefa por vez por frente**; terminar (ou liberar) antes de reservar outra.
+- ⛔ **Nunca executar subtarefa que não é do seu modelo** (coluna Modelo; `niveis-e-modelos.md`),
+  nem a pedido; o pedido fora do seu modelo vira subtarefa livre para o modelo certo.
+- ✅ **Trabalho novo descoberto no caminho vira subtarefa da mãe atual** (C26, 2026-10-17): a IA
+  que está numa subtarefa pode criar **subtarefas novas só dentro da mãe atual**
+  (`<TAREFA>.<próximo número>`), sem nível, modelo nem `effort` (o Jev classifica, C52; Jev fora: padrão C71), com seção na etapa (descrição, critérios
+  e próximo passo) e linha (ou item do índice simplificado) `⬜` livre no `STATUS.md`, e **publica direto** (commit + push do quadro,
+  sem esperar aprovação do usuário). Não reserva a nova (segue na sua) e ⛔ **nunca cria
+  tarefa-mãe nova**: trabalho fora da mãe atual → avisar o usuário. Na equipe de agentes do Claude
+  Code, o executor avisa o líder, e o líder cria e publica.
+- Atualizar **na hora**: `🔄` na linha ao reservar, `✅` ao entregar — nunca acumular.
+- **Próximo passo** da seção da subtarefa sempre atualizado: é a última coisa a escrever ao parar
+  e a primeira a ler ao retomar.
+- Bloqueio → `⛔` na linha e motivo + o que destrava na seção, **na hora**. Depende do usuário → `👀`.
+- Cada subtarefa com **verificação** (como foi conferido), conforme as regras de validação.
+- Decisão tomada no caminho → Decisões da etapa (o quê, quando, quem, por quê); se valer para o
+  projeto todo, também no "Registro de decisões" do `STATUS.md`.
+
+## Encerrar
+
+1. **Subtarefa:** seção com entrega (commit) e verificação; linha com `✅` e "Em uso por" = `—`,
+   **movida** do `STATUS.md` para o `tasks/task_complete.md`; linha da frente atualizada. No banco:
+   commit + push dos arquivos da subtarefa e depois `entregar(p_id, p_frente, p_entrega,
+   p_verificacao)` com o hash do commit; nada se move.
+2. **Tarefa-mãe:** quando todas as subtarefas estiverem ✅, a linha da mãe vira `✅` e também vai
+   para o `task_complete.md`.
+   - ⛔ **Sem aceite do usuário** (C32, 2026-10-17): a IA **sempre aceita** e **nunca pergunta**.
+     Não se cria subtarefa "Aceite do usuário" nem se deixa entrega 👀 esperando confirmação:
+     quem entrega confere (campo Verificação) e fecha. Aceite que já existe no quadro é fechado
+     pela própria IA ao aplicar esta regra.
+   - O 👀 fica só para o que **só o usuário pode fazer** (ação no computador dele, autorização de
+     produção, aprovação do plano de tarefa grande, resposta a uma dúvida). Isso não é aceite.
+   - ✅ **C67 (2026-11-02, ordem do usuário):** a IA **pode mudar qualquer subtarefa para qualquer
+     status** pela RPC `mudar_status` — concluir, cancelar (é também "remover/excluir": nenhuma
+     linha se apaga), sair do 👀, reabrir —, informando `p_autor` e `p_motivo`; a mudança fica em
+     `quadro_decisoes`. Isso não dispensa a verificação da entrega nem o commit + push (C59).
+     ⛔ **Ressalva (C72, 2026-11-04):** subtarefa 🔄 **reservada por outra frente** só muda pela
+     própria frente ou pelo usuário.
+3. Pendências que ficaram para depois → "Pendências" do `STATUS.md`, com motivo.
+4. Lição aprendida que vira regra → "Lições aprendidas" do `STATUS.md` (e a regra no lugar certo).
+5. 🔒 **REGRA INVIOLÁVEL (C59, `commit-por-subtarefa.md`): 1 commit + 1 push por subtarefa entregue, antes de marcá-la entregue (no banco: antes da RPC `entregar`; sem arquivo mudado, `git commit --allow-empty`).** **Um commit por subtarefa entregue**, com o quadro no mesmo commit (e push, conforme a regra
+   do projeto). Na **equipe de agentes**, o **modelo que executa a subtarefa** faz o commit e o push dela, sempre (C73);
+   problema achado na conferência do líder vira a subtarefa `Verificação: <problema>` da mesma mãe
+   (sem nível: o Jev classifica, C52). Detalhe em
+   `niveis-e-modelos.md` (Equipe de agentes).
+6. Responder **apenas** (2 linhas, pedido do usuário em 2026-11-09):
+   linha 1 = **TAREFA FINALIZADA E SINCRONIZADA!**;
+   linha 2 = **TAREFA ID-<ID da tarefa> - <descrição> - <título da tarefa>** — sem resumo nem tabela
+   (perguntas e bloqueios são respondidos normalmente). O projeto pode pedir algo antes ou depois
+   da frase (ex.: a lista de pendentes depois do push).
+
+## Retomar (sessão nova ou que caiu)
+
+1. Ler o `STATUS.md` (no banco, `quadro_frentes` e `quadro_tarefas`): linha da sua frente e a
+   subtarefa com o seu nome em "Em uso por".
+2. Ler o **Próximo passo** da seção da subtarefa; conferir o que já foi feito (arquivos e commits)
+   e **continuar de onde parou**.
+3. ❌ Não recomeçar do zero, não refazer o que está ✅, não pular etapas.
+4. Se o projeto tiver o ai-memory ligado, usar o brief/handoff dele **só depois** dos passos
+   acima e só como complemento; se divergir do quadro, vale o quadro (`memoria-ai.md`).
